@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+{% block titolo %}PFI di {{ pfi.alunno }} · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>PFI di {{ pfi.alunno }}</h1>
+<p>Classe {{ pfi.classe }} ({{ pfi.anno_scolastico }}) · {{ pfi.indirizzo }} · Modello: {{ pfi.modello }}</p>
+<p><a href="/alunni/{{ alunno_id }}/pfi">Ultima versione, approvazione e allegati</a></p>
+
+<form method="post" action="/alunni/{{ alunno_id }}/pfi/modifica">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  {% for s in pfi.sezioni %}
+  <section class="sezione" aria-labelledby="sezione-{{ s.codice }}">
+    <h2 id="sezione-{{ s.codice }}">{{ s.codice }} · {{ s.titolo }}</h2>
+    {% for ss in s.sottosezioni %}
+    <fieldset>
+      <legend>{{ ss.titolo }}</legend>
+      {% for v in ss.voci %}
+      <label>{{ v.etichetta }}
+        <textarea name="r_{{ v.indicatore_id }}">{{ v.testo }}</textarea>
+      </label>
+      {% endfor %}
+    </fieldset>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  <div class="barra">
+    <button type="submit" hx-post="/alunni/{{ alunno_id }}/pfi/modifica" hx-target="#esito">Salva bozza</button>
+    <span id="esito" role="status"></span>
+  </div>
+
+  <h2>Nuova versione</h2>
+  <p>A ogni revisione o scrutinio si genera una versione numerata: il testo qui sopra viene salvato e congelato,
+    e resta nello storico anche se la bozza cambia.</p>
+  <div class="riga">
+    <label>Motivo
+      <select name="motivo">
+        <option value="revisione">Revisione</option>
+        <option value="scrutinio">Scrutinio</option>
+      </select>
+    </label>
+    <button type="submit" formaction="/alunni/{{ alunno_id }}/pfi/versioni">Genera la versione {{ prossima }}</button>
+  </div>
+</form>
+
+<h2>Storico delle versioni</h2>
+{% if versioni.is_empty() %}
+<p>Nessuna versione generata.</p>
+{% else %}
+<table>
+  <thead><tr><th>Versione</th><th>Motivo</th><th>Creata il</th><th>Creata da</th><th>Documenti</th><th>Approvata dal CdC</th><th>Famiglia</th></tr></thead>
+  <tbody>
+    {% for v in versioni %}
+    <tr><td>{{ v.numero }}</td><td>{{ v.motivo }}</td><td>{{ v.creata_il }}</td><td>{{ v.autore }}</td>
+      <td><a href="/versioni/{{ v.id }}/pdf">PDF<span class="nascosto"> della versione {{ v.numero }}</span></a> ·
+        <a href="/versioni/{{ v.id }}/odt">ODT<span class="nascosto"> della versione {{ v.numero }}</span></a></td>
+      <td>{% if v.approvata %}Sì{% else %}No{% endif %}</td>
+      <td>
+        {% if v.approvata %}
+        <form method="post" action="/versioni/{{ v.id }}/visibilita">
+          <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+          <input type="hidden" name="ritorno" value="modifica">
+          {% if v.visibile_famiglia %}
+          Visibile
+          <input type="hidden" name="visibile" value="false">
+          <button type="submit" class="secondario" aria-label="Nascondi alla famiglia la versione {{ v.numero }}">Nascondi</button>
+          {% else %}
+          <input type="hidden" name="visibile" value="true">
+          <button type="submit" aria-label="Rendi visibile alla famiglia la versione {{ v.numero }}">Rendi visibile</button>
+          {% endif %}
+        </form>
+        {% else %}
+        Non visibile
+        {% endif %}
+      </td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

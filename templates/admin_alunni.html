@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% import "macro.html" as m %}
+{% block titolo %}Alunni · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Alunni</h1>
+<table>
+  <thead><tr><th>Classe</th><th>Cognome</th><th>Nome</th><th>Data di nascita</th><th>Account famiglia</th></tr></thead>
+  <tbody>
+    {% for a in alunni %}
+    <tr>
+      <td>{{ a.classe }} ({{ a.anno_scolastico }})</td>
+      <td>{{ a.cognome }}</td>
+      <td>{{ a.nome }}</td>
+      <td>{{ a.data_nascita }}</td>
+      <td>{{ a.email_famiglia.as_deref().unwrap_or("—") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Nuovo alunno</h2>
+<form method="post" action="/admin/alunni" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Classe
+    <select name="classe_id" required>
+      {% for c in classi %}
+      <option value="{{ c.id }}">{{ c.nome }} ({{ c.anno_scolastico }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Cognome <input name="cognome" required></label>
+  <label>Nome <input name="nome" required></label>
+  <label>Data di nascita <input type="date" name="data_nascita" required></label>
+  <label>Email della famiglia (facoltativa) <input type="email" name="email_famiglia"></label>
+  <label>Password iniziale della famiglia (solo per un nuovo account)
+    <input type="password" name="password_famiglia" minlength="8" autocomplete="new-password">
+  </label>
+  <button type="submit">Salva</button>
+</form>
+
+{% call m::importa_csv("alunni", "classe;anno_scolastico;cognome;nome;data_nascita;email_famiglia;password_famiglia", utente.csrf) %}{% endcall %}
+<p>Le ultime due colonne sono facoltative. La data è <code>AAAA-MM-GG</code> oppure <code>GG/MM/AAAA</code>.
+  Più alunni con la stessa email condividono lo stesso account famiglia.</p>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% import "macro.html" as m %}
+{% block titolo %}Docenti · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Docenti e dirigente</h1>
+<table>
+  <thead><tr><th>Cognome</th><th>Nome</th><th>Email</th><th>Profilo</th></tr></thead>
+  <tbody>
+    {% for d in docenti %}
+    <tr><td>{{ d.cognome }}</td><td>{{ d.nome }}</td><td>{{ d.email }}</td><td>{{ d.ruolo }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Nuovo utente</h2>
+<form method="post" action="/admin/docenti" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Cognome <input name="cognome" required></label>
+  <label>Nome <input name="nome" required></label>
+  <label>Email <input type="email" name="email" required></label>
+  <label>Password iniziale (almeno 8 caratteri)
+    <input type="password" name="password" minlength="8" autocomplete="new-password">
+  </label>
+  <label>Profilo
+    <select name="ruolo">
+      <option value="docente">Docente</option>
+      <option value="dirigente">Dirigente</option>
+    </select>
+  </label>
+  <button type="submit">Salva</button>
+</form>
+
+{% call m::importa_csv("docenti", "cognome;nome;email;password;ruolo", utente.csrf) %}{% endcall %}
+<p>La colonna <code>ruolo</code> è facoltativa (<code>docente</code> o <code>dirigente</code>). Per un'email già presente
+  si aggiornano solo nome e cognome: la password non cambia.</p>
+{% endblock %}

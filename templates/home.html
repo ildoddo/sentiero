@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block contenuto %}
+<h1>Benvenuto, {{ utente.nome }}</h1>
+<p>
+  {% match utente.ruolo %}
+  {% when Ruolo::Admin %}Profilo: Amministratore.
+  {% when Ruolo::Docente %}Profilo: Docente.
+  {% when Ruolo::Dirigente %}Profilo: Dirigente.
+  {% when Ruolo::Famiglia %}Profilo: Famiglia / Alunno.
+  {% endmatch %}
+</p>
+
+{% if utente.ruolo == Ruolo::Docente || utente.ruolo == Ruolo::Dirigente %}
+<h2>Alunni</h2>
+{% if alunni.is_empty() %}
+<p>Nessun alunno da consultare.</p>
+{% else %}
+<table>
+  <thead><tr><th>Alunno</th><th>Classe</th><th>PFI</th></tr></thead>
+  <tbody>
+    {% for a in alunni %}
+    <tr>
+      <td>{{ a.cognome }} {{ a.nome }}{% if a.tutor %} · sei il tutor{% endif %}</td>
+      <td>{{ a.classe }}</td>
+      <td>
+        <a href="/alunni/{{ a.id }}/pfi">Consulta<span class="nascosto"> il PFI di {{ a.cognome }} {{ a.nome }}</span></a>
+        {% if a.tutor %}
+        · <a href="/alunni/{{ a.id }}/pfi/modifica">Compila<span class="nascosto"> il PFI di {{ a.cognome }} {{ a.nome }}</span></a>
+        {% endif %}
+        {% if utente.ruolo == Ruolo::Dirigente %}
+        · <a href="/export?alunno_id={{ a.id }}">Esporta<span class="nascosto"> il PFI di {{ a.cognome }} {{ a.nome }}</span></a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if utente.ruolo == Ruolo::Dirigente %}
+<h2>Conservazione di fine anno</h2>
+<p>L'archivio zip contiene PDF e ODT delle sole versioni approvate dal Consiglio di Classe e vistate dalla
+  famiglia, con un indice di approvazioni e visti. Si esporta per classe da qui, o per singolo alunno
+  dalla tabella qui sopra.</p>
+<ul>
+  {% for c in classi %}
+  <li><a href="/export?classe_id={{ c.0 }}">Esporta i PFI della classe {{ c.1 }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% import "macro.html" as m %}
+{% block titolo %}Consigli di Classe · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Consigli di Classe</h1>
+<table>
+  <thead><tr><th>Classe</th><th>Docente</th><th>Azioni</th></tr></thead>
+  <tbody>
+    {% for r in membri %}
+    <tr>
+      <td>{{ r.classe }} ({{ r.anno_scolastico }})</td>
+      <td>{{ r.cognome }} {{ r.nome }}</td>
+      <td>
+        <form method="post" action="/admin/cdc/rimuovi">
+          <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+          <input type="hidden" name="classe_id" value="{{ r.classe_id }}">
+          <input type="hidden" name="docente_id" value="{{ r.docente_id }}">
+          <button type="submit" class="secondario"
+            aria-label="Rimuovi {{ r.cognome }} {{ r.nome }} dal CdC della {{ r.classe }}">Rimuovi</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p>Chi viene rimosso dal CdC non è più tutor degli alunni di quella classe.</p>
+
+<h2>Aggiungi un docente al CdC</h2>
+<form method="post" action="/admin/cdc" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Classe
+    <select name="classe_id" required>
+      {% for c in classi %}
+      <option value="{{ c.id }}">{{ c.nome }} ({{ c.anno_scolastico }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Docente
+    <select name="docente_id" required>
+      {% for d in docenti %}
+      <option value="{{ d.id }}">{{ d.cognome }} {{ d.nome }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Aggiungi</button>
+</form>
+
+{% call m::importa_csv("cdc", "classe;anno_scolastico;email_docente", utente.csrf) %}{% endcall %}
+{% endblock %}

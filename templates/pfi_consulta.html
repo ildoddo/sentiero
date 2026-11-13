@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+{% import "macro.html" as m %}
+{% block titolo %}PFI di {{ alunno }} · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>PFI di {{ alunno }}</h1>
+<p>Classe {{ classe }}</p>
+{% if e_tutor %}
+<p><a href="/alunni/{{ alunno_id }}/pfi/modifica">Compila o rivedi il PFI</a></p>
+{% endif %}
+
+{% if let Some(v) = versione %}
+<h2>Versione {{ v.numero }} ({{ v.motivo }}) del {{ v.data }}</h2>
+<p>
+  <a href="/versioni/{{ v.id }}/pdf">Scarica il PDF</a> ·
+  <a href="/versioni/{{ v.id }}/odt">Scarica l'ODT</a>
+</p>
+<h3>Approvazione e pubblicazione</h3>
+{% if let Some(approvazione) = v.approvazione %}
+<p>Approvata dal Consiglio di Classe il {{ approvazione }}.</p>
+<p>
+  {% if v.visibile_famiglia %}Visibile alla famiglia.{% else %}Non visibile alla famiglia.{% endif %}
+  {% if let Some(visti) = v.visti %}Visto della famiglia: {{ visti }}.{% else %}Nessun visto della famiglia.{% endif %}
+</p>
+{% if e_tutor %}
+<form method="post" action="/versioni/{{ v.id }}/visibilita">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  {% if v.visibile_famiglia %}
+  <input type="hidden" name="visibile" value="false">
+  <button type="submit" class="secondario">Nascondi il PFI alla famiglia</button>
+  {% else %}
+  <input type="hidden" name="visibile" value="true">
+  <button type="submit">Rendi il PFI visibile alla famiglia</button>
+  {% endif %}
+</form>
+{% endif %}
+{% else %}
+<p>Non ancora approvata dal Consiglio di Classe: la famiglia non può vederla.</p>
+{% if puo_approvare %}
+<form method="post" action="/versioni/{{ v.id }}/approva">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <button type="submit">Registra l'approvazione del Consiglio di Classe</button>
+</form>
+{% endif %}
+{% endif %}
+
+{% call m::mostra_contenuto(v.contenuto) %}{% endcall %}
+{% else %}
+<p class="avviso">Il tutor non ha ancora generato una versione del PFI.</p>
+{% endif %}
+
+<h2>Allegati</h2>
+{% if allegati.is_empty() %}
+<p>Nessun allegato pubblicato.</p>
+{% else %}
+<table>
+  <thead><tr><th>Tipo</th><th>File</th><th>Dimensione</th><th>Caricato il</th><th>Famiglia</th>{% if e_tutor %}<th>Azioni</th>{% endif %}</tr></thead>
+  <tbody>
+    {% for a in allegati %}
+    <tr>
+      <td>{{ a.tipo }}</td>
+      <td><a href="/allegati/{{ a.id }}">{{ a.nome_file }}</a></td>
+      <td>{{ a.dimensione / 1024 + 1 }} kB</td>
+      <td>{{ a.caricato_il }}</td>
+      <td>{% if a.visibile_famiglia %}Visibile{% else %}Non visibile{% endif %}</td>
+      {% if e_tutor %}
+      <td>
+        <form method="post" action="/allegati/{{ a.id }}/visibilita">
+          <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+          {% if a.visibile_famiglia %}
+          <input type="hidden" name="visibile" value="false">
+          <button type="submit" class="secondario" aria-label="Nascondi alla famiglia l'allegato {{ a.nome_file }}">Nascondi alla famiglia</button>
+          {% else %}
+          <input type="hidden" name="visibile" value="true">
+          <button type="submit" aria-label="Rendi visibile alla famiglia l'allegato {{ a.nome_file }}">Rendi visibile alla famiglia</button>
+          {% endif %}
+        </form>
+        <form method="post" action="/allegati/{{ a.id }}/elimina">
+          <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+          <button type="submit" class="secondario" aria-label="Elimina l'allegato {{ a.nome_file }}">Elimina</button>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if e_tutor %}
+<h3>Pubblica un allegato</h3>
+<form method="post" action="/alunni/{{ alunno_id }}/allegati" enctype="multipart/form-data" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Tipo
+    <select name="tipo" required>
+      <option value="PDP">PDP · Piano Didattico Personalizzato</option>
+      <option value="PEI">PEI · Piano Educativo Individualizzato</option>
+      <option value="UdA">UdA · Unità di Apprendimento</option>
+    </select>
+  </label>
+  <label>File (PDF, ODT o DOCX, fino a 10 MB)
+    <input type="file" name="file" accept=".pdf,.odt,.docx" required>
+  </label>
+  <button type="submit">Pubblica</button>
+</form>
+{% endif %}
+{% endblock %}

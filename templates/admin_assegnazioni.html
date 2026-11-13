@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block titolo %}Assegnazioni · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Assegnazione di modello e tutor</h1>
+<form method="get" action="/admin/assegnazioni" class="riga">
+  <label>Classe
+    <select name="classe_id">
+      {% for c in classi %}
+      <option value="{{ c.id }}"{% if c.id == classe_id %} selected{% endif %}>{{ c.nome }} ({{ c.anno_scolastico }}) · {{ c.indirizzo }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="secondario">Mostra</button>
+</form>
+
+{% if alunni.is_empty() %}
+<p>Nessun alunno in questa classe.</p>
+{% else %}
+<form method="post" action="/admin/assegnazioni">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <input type="hidden" name="classe_id" value="{{ classe_id }}">
+  <table>
+    <thead><tr><th>Seleziona</th><th>Alunno</th><th>Modello PFI</th><th>Tutor</th></tr></thead>
+    <tbody>
+      {% for a in alunni %}
+      <tr>
+        <td><input type="checkbox" name="alunno_id" value="{{ a.id }}" id="alunno-{{ a.id }}"></td>
+        <td><label for="alunno-{{ a.id }}">{{ a.cognome }} {{ a.nome }}</label></td>
+        <td>{{ a.modello.as_deref().unwrap_or("—") }}</td>
+        <td>{{ a.tutor.as_deref().unwrap_or("—") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="riga">
+    <label>Modello PFI
+      <select name="modello_id">
+        <option value="">Non modificare</option>
+        {% for m in modelli %}
+        <option value="{{ m.id }}">{{ m.nome }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Tutor (docenti del CdC)
+      <select name="tutor_id">
+        <option value="">Non modificare</option>
+        {% for d in docenti %}
+        <option value="{{ d.id }}">{{ d.nome }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Applica a
+      <select name="ambito">
+        <option value="selezionati">Alunni selezionati</option>
+        <option value="classe">Tutta la classe</option>
+      </select>
+    </label>
+    <button type="submit">Assegna</button>
+  </div>
+</form>
+<p>Il modello non si può cambiare per un alunno il cui PFI è già stato avviato.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% import "macro.html" as m %}
+{% block titolo %}Classi · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Classi</h1>
+<table>
+  <thead><tr><th>Classe</th><th>Anno scolastico</th><th>Indirizzo</th><th>Alunni</th></tr></thead>
+  <tbody>
+    {% for c in classi %}
+    <tr><td>{{ c.nome }}</td><td>{{ c.anno_scolastico }}</td><td>{{ c.indirizzo }}</td><td>{{ c.alunni }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Nuova classe</h2>
+<form method="post" action="/admin/classi" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Nome <input name="nome" required placeholder="1A"></label>
+  <label>Anno scolastico <input name="anno_scolastico" required placeholder="2026/2027"></label>
+  <label>Indirizzo di studio <input name="indirizzo" required></label>
+  <button type="submit">Salva</button>
+</form>
+
+{% call m::importa_csv("classi", "nome;anno_scolastico;indirizzo", utente.csrf) %}{% endcall %}
+{% endblock %}

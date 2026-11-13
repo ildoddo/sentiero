@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% import "macro.html" as m %}
+{% block titolo %}Il PFI · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Progetto Formativo Individuale</h1>
+{% if figli.is_empty() %}
+<p>Nessun alunno è collegato a questo account.</p>
+{% endif %}
+{% for f in figli %}
+<article>
+  <h2>{{ f.nome }} · classe {{ f.classe }}</h2>
+  {% if let Some(v) = f.versione %}
+  <p>Versione {{ v.numero }} del {{ v.data }}, approvata dal Consiglio di Classe.</p>
+  <p>
+    <a href="/versioni/{{ v.id }}/pdf">Scarica il PDF</a> ·
+    <a href="/versioni/{{ v.id }}/odt">Scarica l'ODT</a>
+  </p>
+  {% if let Some(data) = v.visto %}
+  <p class="avviso">Visto apposto il {{ data }} da {{ utente.nome }} {{ utente.cognome }}.</p>
+  {% else %}
+  <form method="post" action="/famiglia/versioni/{{ v.id }}/visto">
+    <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+    <button type="submit">Apponi il visto<span class="nascosto"> al PFI di {{ f.nome }}</span></button>
+  </form>
+  <p>Con il visto dichiari di aver preso visione di questa versione del PFI.</p>
+  {% endif %}
+  {% call m::mostra_contenuto(v.contenuto) %}{% endcall %}
+  {% else %}
+  <p class="avviso">La scuola non ha ancora reso visibile il PFI.</p>
+  {% endif %}
+
+  {% if !f.allegati.is_empty() %}
+  <h3>Allegati</h3>
+  <ul>
+    {% for a in f.allegati %}
+    <li>{{ a.tipo }} · <a href="/allegati/{{ a.id }}">{{ a.nome_file }}</a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</article>
+{% endfor %}
+{% endblock %}

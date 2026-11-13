@@ -1,0 +1,28 @@
+{% macro importa_csv(tipo, colonne, csrf) %}
+<h2>Importa da CSV</h2>
+<p>File UTF-8 con riga di intestazione, separatore <code>;</code> o <code>,</code>. Colonne: <code>{{ colonne }}</code></p>
+<form method="post" action="/admin/import/{{ tipo }}" enctype="multipart/form-data" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ csrf }}">
+  <label>File CSV
+    <input type="file" name="file" accept=".csv,text/csv" required>
+  </label>
+  <button type="submit">Importa</button>
+</form>
+{% endmacro %}
+
+{% macro mostra_contenuto(c) %}
+{% for s in c.sezioni %}
+<section class="sezione">
+  <h3>{{ s.codice }} · {{ s.titolo }}</h3>
+  {% for ss in s.sottosezioni %}
+  <h4>{{ ss.titolo }}</h4>
+  <dl>
+    {% for voce in ss.voci %}
+    <dt>{{ voce.etichetta }}</dt>
+    <dd class="testo">{% if voce.testo.is_empty() %}—{% else %}{{ voce.testo }}{% endif %}</dd>
+    {% endfor %}
+  </dl>
+  {% endfor %}
+</section>
+{% endfor %}
+{% endmacro %}

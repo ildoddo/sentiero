@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% block titolo %}{{ nome }} · Modelli PFI · Sentiero{% endblock %}
+{% block contenuto %}
+<p><a href="/admin/modelli">← Modelli PFI</a></p>
+<h1>{{ nome }}</h1>
+<form method="post" action="/admin/modelli/{{ id }}" class="riga">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Nome <input name="nome" value="{{ nome }}" required></label>
+  <label>Indirizzo di studio <input name="indirizzo" value="{{ indirizzo }}" required></label>
+  <button type="submit">Salva</button>
+</form>
+<p class="avviso">Le modifiche valgono per i PFI ancora in compilazione. Le versioni già generate non cambiano.
+  Eliminare un indicatore o una sottosezione cancella anche i testi in bozza che li riguardano.</p>
+
+{% for s in sezioni %}
+<section class="sezione{% if !s.attiva %} spenta{% endif %}" aria-labelledby="sezione-{{ s.id }}">
+  <div class="riga">
+    <h2 id="sezione-{{ s.id }}">{{ s.codice }} · {{ s.titolo }}{% if !s.attiva %} (disattivata){% endif %}</h2>
+    <form method="post" action="/admin/sezioni/{{ s.id }}/attiva">
+      <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+      <input type="hidden" name="modello_id" value="{{ id }}">
+      {% if s.attiva %}
+      <input type="hidden" name="attiva" value="false">
+      <button type="submit" class="secondario">Disattiva la sezione {{ s.codice }}</button>
+      {% else %}
+      <input type="hidden" name="attiva" value="true">
+      <button type="submit">Attiva la sezione {{ s.codice }}</button>
+      {% endif %}
+    </form>
+  </div>
+
+  {% for ss in s.sottosezioni %}
+  <fieldset{% if !ss.attiva %} class="spenta"{% endif %}>
+    <legend>{{ ss.titolo }}{% if ss.personalizzata %} · personalizzata{% endif %}{% if !ss.attiva %} · disattivata{% endif %}</legend>
+    <form method="post" action="/admin/sottosezioni/{{ ss.id }}" class="riga">
+      <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+      <input type="hidden" name="modello_id" value="{{ id }}">
+      <label>Titolo della sottosezione <input name="titolo" value="{{ ss.titolo }}" required></label>
+      <label class="spunta"><input type="checkbox" name="attiva"{% if ss.attiva %} checked{% endif %}> Attiva</label>
+      <button type="submit">Salva</button>
+    </form>
+    {% if ss.personalizzata %}
+    <form method="post" action="/admin/sottosezioni/{{ ss.id }}/elimina">
+      <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+      <input type="hidden" name="modello_id" value="{{ id }}">
+      <button type="submit" class="secondario">Elimina la sottosezione «{{ ss.titolo }}»</button>
+    </form>
+    {% endif %}
+
+    <table>
+      <thead><tr><th>Indicatore</th><th>Contenuto proposto</th><th>Azioni</th></tr></thead>
+      <tbody>
+        {% for i in ss.indicatori %}
+        <tr>
+          <td><input form="indicatore-{{ i.id }}" name="etichetta" value="{{ i.etichetta }}" required aria-label="Indicatore"></td>
+          <td><textarea form="indicatore-{{ i.id }}" name="testo_proposto" aria-label="Contenuto proposto per {{ i.etichetta }}">{{ i.testo_proposto }}</textarea></td>
+          <td>
+            <form id="indicatore-{{ i.id }}" method="post" action="/admin/indicatori/{{ i.id }}">
+              <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+              <input type="hidden" name="modello_id" value="{{ id }}">
+              <button type="submit" aria-label="Salva l'indicatore {{ i.etichetta }}">Salva</button>
+            </form>
+            {% if ss.indicatori.len() > 1 %}
+            <form method="post" action="/admin/indicatori/{{ i.id }}/elimina">
+              <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+              <input type="hidden" name="modello_id" value="{{ id }}">
+              <button type="submit" class="secondario" aria-label="Elimina l'indicatore {{ i.etichetta }}">Elimina</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form method="post" action="/admin/sottosezioni/{{ ss.id }}/indicatori" class="riga">
+      <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+      <input type="hidden" name="modello_id" value="{{ id }}">
+      <label>Nuovo indicatore <input name="etichetta" required></label>
+      <button type="submit" class="secondario">Aggiungi indicatore</button>
+    </form>
+  </fieldset>
+  {% endfor %}
+
+  <h3>Sottosezioni personalizzate: {{ s.personalizzate() }} di {{ max_personalizzate }}</h3>
+  {% if s.personalizzate() < max_personalizzate %}
+  <form method="post" action="/admin/sezioni/{{ s.id }}/sottosezioni" class="riga">
+    <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+    <input type="hidden" name="modello_id" value="{{ id }}">
+    <label>Titolo <input name="titolo" required></label>
+    <label>Primo indicatore <input name="etichetta" required></label>
+    <button type="submit" class="secondario">Aggiungi sottosezione alla sezione {{ s.codice }}</button>
+  </form>
+  {% else %}
+  <p>Limite raggiunto per questa sezione.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

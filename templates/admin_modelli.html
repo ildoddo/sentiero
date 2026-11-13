@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block titolo %}Modelli PFI · Sentiero{% endblock %}
+{% block contenuto %}
+<h1>Modelli PFI</h1>
+<table>
+  <thead><tr><th>Modello</th><th>Indirizzo di studio</th><th>Alunni assegnati</th></tr></thead>
+  <tbody>
+    {% for m in modelli %}
+    <tr><td><a href="/admin/modelli/{{ m.id }}">{{ m.nome }}</a></td><td>{{ m.indirizzo }}</td><td>{{ m.alunni }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Nuovo modello</h2>
+<p>Il modello nasce con la struttura base in cinque sezioni (A–E) e i contenuti proposti, poi modificabili.</p>
+<form method="post" action="/admin/modelli" class="colonna">
+  <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
+  <label>Nome <input name="nome" required></label>
+  <label>Indirizzo di studio <input name="indirizzo" required></label>
+  <button type="submit">Crea modello</button>
+</form>
+{% endblock %}
