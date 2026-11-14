@@ -2,7 +2,12 @@ use sqlx::SqlitePool;
 
 use std::path::Path;
 
-use crate::{auth::crea_hash, error::AppError, modello, routes::pfi};
+use crate::{
+    auth::{crea_hash, token_casuale},
+    error::AppError,
+    modello,
+    routes::pfi,
+};
 
 pub const UTENTI: [(&str, &str, &str, &str); 5] = [
     ("admin@sentiero.test", "admin", "Anna", "Amministratrice"),
@@ -204,6 +209,23 @@ pub async fn pfi_di_esempio(db: &SqlitePool, data_dir: &Path) -> Result<(), AppE
     }
     let pfi_id = pfi::salva_risposte(&mut tx, alunno_id, &campi).await?;
     pfi::congela_versione(&mut tx, data_dir, alunno_id, pfi_id, "revisione", tutor_id).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Primo avvio della modalità personale: il tutor locale e un modello da cui partire.
+pub async fn personale(db: &SqlitePool) -> Result<(), AppError> {
+    // Password casuale che nessuno conosce: in questa modalità si entra solo dal link di avvio.
+    let hash = crea_hash(&token_casuale()?).await?;
+    let mut tx = db.begin().await?;
+    sqlx::query(
+        "INSERT INTO users (email, password_hash, ruolo, nome, cognome)
+         VALUES ('tutor@localhost', ?, 'docente', 'Tutor', '')",
+    )
+    .bind(hash)
+    .execute(&mut *tx)
+    .await?;
+    modello::crea(&mut tx, "Modello base", "Generale").await?;
     tx.commit().await?;
     Ok(())
 }

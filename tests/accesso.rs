@@ -36,6 +36,7 @@ async fn stato() -> AppState {
         data_dir: cartella_di_prova(),
         cookie_secure: false,
         seed_password: None,
+        avvio_personale: None,
     };
     AppState {
         db,
@@ -1898,4 +1899,122 @@ async fn pfi_di_esempio_completo() {
         html.contains("Il negozio in classe")
             && html.contains("approvazione del Consiglio di Classe</button>")
     );
+}
+
+#[tokio::test]
+async fn modalita_personale_del_tutor() {
+    // Nella modalità normale il link di avvio non esiste.
+    let normale = sentiero::app(stato().await);
+    assert_eq!(
+        get_come(&normale, "/avvio/qualcosa", None).await.status(),
+        StatusCode::NOT_FOUND
+    );
+
+    let db = apri_db("sqlite::memory:").await.unwrap();
+    seed::personale(&db).await.unwrap();
+    let config = Config {
+        bind: String::new(),
+        database_url: String::new(),
+        data_dir: cartella_di_prova(),
+        cookie_secure: false,
+        seed_password: None,
+        avvio_personale: Some("segreto-di-avvio".into()),
+    };
+    let stato = AppState {
+        db,
+        config: Arc::new(config),
+    };
+    let app = sentiero::app(stato.clone());
+
+    // Si entra solo con il token generato all'avvio.
+    assert_eq!(
+        get_come(&app, "/", None).await.status(),
+        StatusCode::SEE_OTHER
+    );
+    assert_eq!(
+        get_come(&app, "/avvio/sbagliato", None).await.status(),
+        StatusCode::NOT_FOUND
+    );
+    let res = get_come(&app, "/avvio/segreto-di-avvio", None).await;
+    assert_eq!(res.status(), StatusCode::SEE_OTHER);
+    let cookie = res.headers()[header::SET_COOKIE]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let csrf: String = sqlx::query_scalar("SELECT csrf_token FROM sessions")
+        .fetch_one(&stato.db)
+        .await
+        .unwrap();
+
+    // Il tutor gestisce da sé classi, alunni e modelli.
+    for uri in [
+        "/",
+        "/admin/classi",
+        "/admin/alunni",
+        "/admin/modelli",
+        "/admin/assegnazioni",
+    ] {
+        assert_eq!(
+            get_come(&app, uri, Some(&cookie)).await.status(),
+            StatusCode::OK,
+            "{uri}"
+        );
+    }
+    let corpo = format!("_csrf={csrf}&nome=1A&anno_scolastico=2026%2F2027&indirizzo=Servizi");
+    assert_eq!(
+        post_form(&app, "/admin/classi", &cookie, &corpo)
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    let corpo = format!("_csrf={csrf}&classe_id=1&cognome=Verdi&nome=Anna&data_nascita=2012-05-01");
+    assert_eq!(
+        post_form(&app, "/admin/alunni", &cookie, &corpo)
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    // L'alunno nasce già suo, con un modello: può compilare subito.
+    let pronti = "SELECT COUNT(*) FROM alunni a JOIN users u ON u.id = a.tutor_id WHERE a.modello_id IS NOT NULL";
+    assert_eq!(conta(&stato, pronti).await, 1);
+    assert_eq!(
+        get_come(&app, "/alunni/1/pfi/modifica", Some(&cookie))
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let corpo = format!("_csrf={csrf}&motivo=revisione&r_1=Testo");
+    assert_eq!(
+        post_form(&app, "/alunni/1/pfi/versioni", &cookie, &corpo)
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    assert!(
+        stato
+            .config
+            .data_dir
+            .join("documenti/pfi1-v1.pdf")
+            .is_file()
+    );
+    assert_eq!(
+        get_come(&app, "/versioni/1/odt", Some(&cookie))
+            .await
+            .status(),
+        StatusCode::OK
+    );
+
+    // Anche l'importazione da CSV assegna gli alunni al tutor.
+    let csv =
+        "classe;anno_scolastico;cognome;nome;data_nascita\n1A;2026/2027;Neri;Ugo;2012-01-01\n";
+    assert_eq!(
+        post_csv(&app, "/admin/import/alunni", &cookie, &csrf, csv)
+            .await
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    assert_eq!(conta(&stato, pronti).await, 2);
 }

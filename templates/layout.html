@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block intestazione %}
 <nav aria-label="Menu principale">
-  {% if utente.ruolo == Ruolo::Admin %}
+  {% if utente.personale %}
+  <a href="/">I miei alunni</a>
+  <a href="/admin/classi">Classi</a>
+  <a href="/admin/alunni">Alunni</a>
+  <a href="/admin/modelli">Modelli PFI</a>
+  <a href="/admin/assegnazioni">Modello per alunno</a>
+  {% else if utente.ruolo == Ruolo::Admin %}
   <a href="/admin/classi">Classi</a>
   <a href="/admin/docenti">Docenti</a>
   <a href="/admin/alunni">Alunni</a>
@@ -10,9 +16,11 @@
   <a href="/admin/assegnazioni">Assegnazioni</a>
   {% endif %}
 </nav>
+{% if !utente.personale %}
 <form method="post" action="/logout" class="utente">
   <span>{{ utente.nome }} {{ utente.cognome }}</span>
   <input type="hidden" name="_csrf" value="{{ utente.csrf }}">
   <button type="submit">Esci</button>
 </form>
+{% endif %}
 {% endblock %}

@@ -9,7 +9,7 @@ use askama::Template;
 use axum::{
     Form,
     body::Bytes,
-    extract::{FromRequest, FromRequestParts, Multipart, Request, State},
+    extract::{FromRequest, FromRequestParts, Multipart, Path, Request, State},
     http::{
         HeaderMap, StatusCode,
         header::{COOKIE, SET_COOKIE},
@@ -43,6 +43,9 @@ pub struct Utente {
     pub nome: String,
     pub cognome: String,
     pub csrf: String,
+    /// Vero in modalità personale, dove l'unico utente gestisce da sé anche alunni e modelli.
+    #[sqlx(skip)]
+    pub personale: bool,
 }
 
 impl FromRequestParts<AppState> for Utente {
@@ -52,7 +55,7 @@ impl FromRequestParts<AppState> for Utente {
         let token = cookie(&parts.headers, COOKIE_SESSIONE)
             .ok_or(AppError::NonAutenticato)?
             .to_owned();
-        sqlx::query_as(
+        let mut utente: Utente = sqlx::query_as(
             "SELECT u.id, u.ruolo, u.nome, u.cognome, s.csrf_token AS csrf
              FROM sessions s JOIN users u ON u.id = s.user_id
              WHERE s.token = ? AND s.scade_il > ?",
@@ -61,7 +64,9 @@ impl FromRequestParts<AppState> for Utente {
         .bind(adesso())
         .fetch_optional(&state.db)
         .await?
-        .ok_or(AppError::NonAutenticato)
+        .ok_or(AppError::NonAutenticato)?;
+        utente.personale = state.config.avvio_personale.is_some();
+        Ok(utente)
     }
 }
 
@@ -78,7 +83,11 @@ macro_rules! estrattore_ruolo {
                 state: &AppState,
             ) -> Result<Self, AppError> {
                 let utente = Utente::from_request_parts(parts, state).await?;
-                if utente.ruolo == Ruolo::$nome {
+                // In modalità personale non esiste un amministratore: le sue pagine sono del tutor.
+                let fa_da_admin = utente.personale
+                    && Ruolo::$nome == Ruolo::Admin
+                    && utente.ruolo == Ruolo::Docente;
+                if utente.ruolo == Ruolo::$nome || fa_da_admin {
                     Ok(Self(utente))
                 } else {
                     Err(AppError::Vietato)
@@ -329,6 +338,11 @@ pub async fn login(
         return Ok((StatusCode::UNAUTHORIZED, html).into_response());
     };
 
+    apri_sessione(&state, id, DURATA_SESSIONE).await
+}
+
+/// Crea la sessione e risponde con il cookie e il redirect alla home.
+async fn apri_sessione(state: &AppState, user_id: i64, durata: i64) -> Result<Response, AppError> {
     let ora = adesso();
     sqlx::query("DELETE FROM sessions WHERE scade_il <= ?")
         .bind(ora)
@@ -338,9 +352,9 @@ pub async fn login(
     // shortcut: il token è salvato in chiaro, chi legge il DB può usare le sessioni attive (max 8 ore); salvarne l'hash se il DB esce dal server.
     sqlx::query("INSERT INTO sessions (token, user_id, csrf_token, scade_il) VALUES (?, ?, ?, ?)")
         .bind(&token)
-        .bind(id)
+        .bind(user_id)
         .bind(token_casuale()?)
-        .bind(ora + DURATA_SESSIONE)
+        .bind(ora + durata)
         .execute(&state.db)
         .await?;
 
@@ -350,9 +364,28 @@ pub async fn login(
         ""
     };
     let cookie = format!(
-        "{COOKIE_SESSIONE}={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={DURATA_SESSIONE}{secure}"
+        "{COOKIE_SESSIONE}={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={durata}{secure}"
     );
     Ok(([(SET_COOKIE, cookie)], Redirect::to("/")).into_response())
+}
+
+/// Ingresso della modalità personale: il link con il token generato all'avvio apre la sessione
+/// del tutor locale. Senza quel token, noto solo a chi ha avviato il programma, non si entra:
+/// altri utenti del computer o pagine web che raggiungono la porta locale restano fuori.
+pub async fn avvio(
+    State(state): State<AppState>,
+    Path(token): Path<String>,
+) -> Result<Response, AppError> {
+    match &state.config.avvio_personale {
+        Some(atteso) if uguali(atteso, &token) => {}
+        _ => return Err(AppError::NonTrovato),
+    }
+    let tutor: i64 =
+        sqlx::query_scalar("SELECT id FROM users WHERE ruolo = 'docente' ORDER BY id LIMIT 1")
+            .fetch_one(&state.db)
+            .await?;
+    // Un mese: la scheda del browser resta utilizzabile senza dover riavviare il programma ogni giorno.
+    apri_sessione(&state, tutor, 30 * 24 * 3600).await
 }
 
 #[derive(Deserialize)]

@@ -2,6 +2,8 @@
 name = "sentiero"
 version = "0.1.0"
 edition = "2024"
+# Con due eseguibili, `cargo run` continua ad avviare il server della scuola.
+default-run = "sentiero"
 
 [dependencies]
 argon2 = "0.6.0"
@@ -14,11 +16,28 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 serde_urlencoded = "0.7.1"
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
+tao = { version = "0.37.2", optional = true }
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "signal", "fs"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
+wry = { version = "0.57.2", optional = true }
 zip = { version = "9.5.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [dev-dependencies]
 tower = { version = "0.5.3", features = ["util"] }
+
+[features]
+# Finestra nativa per `sentiero-tutor`. Opzionale: il server della scuola si compila senza librerie grafiche.
+finestra = ["dep:wry", "dep:tao", "dep:muda"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+muda = { version = "0.21.2", default-features = false, optional = true }
+
+# Senza strip: con gli strumenti Apple recenti la rimozione dei simboli lascia le librerie delle
+# macro (sqlx-macros) con una tabella non allineata, che macOS rifiuta di caricare.
+[profile.release]
+strip = false
+
+[profile.release.build-override]
+strip = false

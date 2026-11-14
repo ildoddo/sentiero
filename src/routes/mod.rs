@@ -33,6 +33,7 @@ pub fn router() -> Router<AppState> {
         .route("/", get(home))
         .route("/login", get(auth::login_form).post(auth::login))
         .route("/logout", post(auth::logout))
+        .route("/avvio/{token}", get(auth::avvio))
         .route("/static/style.css", get(css))
         .route("/static/htmx.min.js", get(htmx))
 }

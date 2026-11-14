@@ -355,8 +355,23 @@ struct FormAlunno {
     password_famiglia: String,
 }
 
+/// In modalità personale nessuno fa le assegnazioni: i nuovi alunni vanno al tutor locale, con il
+/// primo modello disponibile (che resta modificabile dalla pagina Assegnazioni).
+async fn adotta_alunni(conn: &mut SqliteConnection, tutor_id: i64) -> Result<(), AppError> {
+    sqlx::query("UPDATE alunni SET tutor_id = ? WHERE tutor_id IS NULL")
+        .bind(tutor_id)
+        .execute(&mut *conn)
+        .await?;
+    sqlx::query(
+        "UPDATE alunni SET modello_id = (SELECT MIN(id) FROM modelli) WHERE modello_id IS NULL",
+    )
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
 async fn crea_alunno(
-    Admin(_): Admin,
+    Admin(utente): Admin,
     State(state): State<AppState>,
     Modulo(f): Modulo<FormAlunno>,
 ) -> Result<Redirect, AppError> {
@@ -375,6 +390,9 @@ async fn crea_alunno(
         password_famiglia: &f.password_famiglia,
     };
     inserisci_alunno(&mut tx, &alunno).await?;
+    if utente.personale {
+        adotta_alunni(&mut tx, utente.id).await?;
+    }
     tx.commit().await?;
     Ok(Redirect::to("/admin/alunni"))
 }
@@ -484,7 +502,7 @@ fn con_riga(n: usize, e: AppError) -> AppError {
 
 /// Importa un file CSV in un'unica transazione: se una riga è sbagliata non viene salvato nulla.
 async fn importa(
-    Admin(_): Admin,
+    Admin(utente): Admin,
     State(state): State<AppState>,
     Path(tipo): Path<String>,
     caricamento: Caricamento,
@@ -548,6 +566,9 @@ async fn importa(
             }
         }
         _ => return Err(AppError::NonTrovato),
+    }
+    if utente.personale {
+        adotta_alunni(&mut tx, utente.id).await?;
     }
     tx.commit().await?;
     Ok(Redirect::to(&format!("/admin/{tipo}")))

@@ -13,7 +13,8 @@
 {% if utente.ruolo == Ruolo::Docente || utente.ruolo == Ruolo::Dirigente %}
 <h2>Alunni</h2>
 {% if alunni.is_empty() %}
-<p>Nessun alunno da consultare.</p>
+<p>Nessun alunno da consultare.{% if utente.personale %} Crea una classe dalla pagina
+  <a href="/admin/classi">Classi</a>, poi aggiungi gli alunni dalla pagina <a href="/admin/alunni">Alunni</a>.{% endif %}</p>
 {% else %}
 <table>
   <thead><tr><th>Alunno</th><th>Classe</th><th>PFI</th></tr></thead>

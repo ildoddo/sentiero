@@ -8,6 +8,9 @@ pub struct Config {
     pub data_dir: PathBuf,
     pub cookie_secure: bool,
     pub seed_password: Option<String>,
+    /// Modalità personale (eseguibile `sentiero-tutor`): un solo tutor sul proprio computer, che
+    /// entra senza password dal link di avvio contenente questo token.
+    pub avvio_personale: Option<String>,
 }
 
 impl Config {
@@ -24,6 +27,7 @@ impl Config {
             seed_password: env::var("SENTIERO_SEED_PASSWORD")
                 .ok()
                 .filter(|p| !p.is_empty()),
+            avvio_personale: None,
         }
     }
 }

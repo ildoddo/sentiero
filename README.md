@@ -28,6 +28,35 @@ Utenti di esempio (stessa password): `admin@sentiero.test`, `tutor@sentiero.test
 I dati di esempio comprendono la classe 1A con tre alunni, già assegnati al "Modello base" e al tutor,
 e un PFI completo per Giulia Bianchi con la versione 1 già generata e ancora da approvare.
 
+## Sentiero per uso personale del tutor
+
+Un secondo eseguibile, `sentiero-tutor`, avvia Sentiero per un solo tutor sul proprio computer,
+in una finestra propria:
+
+```bash
+cargo run --release --features finestra --bin sentiero-tutor
+```
+
+Chiudendo la finestra il programma termina. PDF, ODT e allegati scaricati finiscono nella cartella
+Download e si aprono con il programma predefinito. Su Linux la finestra richiede le librerie di
+sistema GTK 3 e WebKitGTK.
+
+Senza `--features finestra` lo stesso eseguibile apre l'interfaccia nel browser predefinito e resta
+attivo finché non si preme Ctrl+C.
+
+In entrambi i casi il programma ascolta solo su `127.0.0.1`, su una porta libera, e non ci sono
+account né password: si entra dal link con un token casuale generato a ogni avvio, quindi la porta
+locale non è utilizzabile da altri.
+
+Il tutor crea da sé classi e alunni (anche da CSV), che gli vengono assegnati automaticamente con
+il primo modello PFI; poi compila, genera le versioni con PDF e ODT e allega i documenti. I modelli
+si modificano dalla stessa interfaccia.
+
+I dati stanno nella cartella dell'utente (`~/Library/Application Support/Sentiero` su macOS,
+`%APPDATA%\Sentiero` su Windows, `~/.local/share/sentiero` su Linux), oppure in
+`SENTIERO_DATA_DIR`. È un archivio separato da quello del server della scuola: non c'è
+sincronizzazione tra i due.
+
 ## Configurazione
 
 | Variabile | Predefinito | Significato |
@@ -117,6 +146,8 @@ route, quali profili possono accedere.
 | `serde_urlencoded` | Lettura dei form insieme al controllo del token CSRF |
 | `thiserror` | Tipo di errore dell'applicazione |
 | `tracing`, `tracing-subscriber` | Log strutturati, senza dati personali |
+| `wry`, `tao` (solo con `finestra`) | Finestra nativa con la webview di sistema per `sentiero-tutor`; opzionali, il server non li compila |
+| `muda` (solo con `finestra`, solo macOS) | Menu dell'applicazione e Modifica: senza, Cmd+C, Cmd+V e Cmd+Q non funzionano nella finestra |
 | `zip` | Scrittura dei file ODT (che sono archivi zip) e dell'archivio di conservazione |
 | `tower` (solo test) | Invio di richieste al router senza aprire una porta |
 
