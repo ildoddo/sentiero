@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sfondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a9c75"/>
+      <stop offset="1" stop-color="#1f4d39"/>
+    </linearGradient>
+    <clipPath id="forma"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#sfondo)"/>
+  <g clip-path="url(#forma)">
+    <!-- colline -->
+    <path d="M100 640 Q330 500 560 610 T924 560 V924 H100 Z" fill="#2f6b4f"/>
+    <path d="M100 760 Q380 640 640 740 T924 700 V924 H100 Z" fill="#245540"/>
+    <!-- il sentiero, che si restringe verso la meta -->
+    <path d="M330 924 C 420 800, 720 760, 600 640 C 500 545, 440 500, 560 420 C 640 365, 610 320, 640 290
+             L 664 296 C 650 330, 700 380, 610 440 C 520 500, 560 520, 680 620 C 860 770, 600 800, 560 924 Z"
+          fill="#f7f8f5"/>
+  </g>
+  <!-- la meta -->
+  <path d="M652 300 V190" stroke="#f7f8f5" stroke-width="16" stroke-linecap="round"/>
+  <path d="M660 192 L770 226 L660 262 Z" fill="#e0a100"/>
+</svg>

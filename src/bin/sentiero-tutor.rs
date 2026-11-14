@@ -2,6 +2,13 @@
 //! password. Con la funzionalità `finestra` l'interfaccia si apre in una finestra propria,
 //! altrimenti nel browser predefinito.
 
+// Su Windows l'app con la finestra non deve aprire anche una console. Solo in release: in debug
+// la console serve a leggere i messaggi.
+#![cfg_attr(
+    all(windows, feature = "finestra", not(debug_assertions)),
+    windows_subsystem = "windows"
+)]
+
 use std::{ffi::OsStr, path::PathBuf, process::Command, sync::Arc};
 
 use sentiero::{AppState, apri_db, auth::token_casuale, config::Config, seed};
@@ -96,9 +103,15 @@ fn apri_con_il_sistema(cosa: &OsStr) {
         Command::new("open").arg(cosa).spawn()
     } else if cfg!(windows) {
         // Il primo argomento vuoto è il titolo della finestra, che `start` altrimenti prenderebbe dal percorso.
-        Command::new("cmd")
-            .args([OsStr::new("/C"), OsStr::new("start"), OsStr::new(""), cosa])
-            .spawn()
+        let mut comando = Command::new("cmd");
+        comando.args([OsStr::new("/C"), OsStr::new("start"), OsStr::new(""), cosa]);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            // CREATE_NO_WINDOW: senza, `cmd` fa comparire per un attimo una console.
+            comando.creation_flags(0x0800_0000);
+        }
+        comando.spawn()
     } else {
         Command::new("xdg-open").arg(cosa).spawn()
     };

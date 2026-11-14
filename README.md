@@ -43,6 +43,17 @@ che abilitano Cmd+C, Cmd+V e Cmd+Q. PDF, ODT e allegati scaricati finiscono nell
 Download e si aprono con il programma predefinito. Su Linux la finestra richiede le librerie di
 sistema GTK 3 e WebKitGTK.
 
+Su macOS si può creare un'app con la sua icona, da tenere in Applicazioni o nel Dock:
+
+```bash
+./scripts/crea-app.sh
+```
+
+Lo script compila e assembla `target/release/Sentiero.app`, che si avvia con un doppio clic senza
+terminale. L'app è firmata solo localmente: funziona sul Mac che l'ha creata, mentre su un altro
+Mac macOS la blocca finché non la si autorizza a mano. L'icona è `assets/icona.svg`; se la si
+modifica, `./scripts/crea-icona.sh` rigenera `assets/Sentiero.icns`.
+
 Senza `--features finestra` lo stesso eseguibile apre l'interfaccia nel browser predefinito e resta
 attivo finché non si preme Ctrl+C.
 
@@ -58,6 +69,25 @@ I dati stanno nella cartella dell'utente (`~/Library/Application Support/Sentier
 `%APPDATA%\Sentiero` su Windows, `~/.local/share/sentiero` su Linux), oppure in
 `SENTIERO_DATA_DIR`. È un archivio separato da quello del server della scuola: non c'è
 sincronizzazione tra i due.
+
+### Release per Windows e macOS
+
+Il workflow `.github/workflows/release.yml` compila l'app desktop su GitHub Actions:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Al push di un tag `v*` crea una release GitHub con `Sentiero-windows-x64.zip` (contiene
+`Sentiero.exe`) e `Sentiero-macos-arm64.zip` (contiene `Sentiero.app`, per Mac con Apple Silicon).
+Per provare la compilazione senza pubblicare nulla lo si avvia a mano da Actions > Release >
+Run workflow: gli zip restano scaricabili dalla pagina dell'esecuzione.
+
+Gli eseguibili non sono firmati: al primo avvio Windows mostra l'avviso di SmartScreen
+("Ulteriori informazioni" > "Esegui comunque") e macOS blocca l'app scaricata finché non la si
+autorizza da Impostazioni di Sistema > Privacy e sicurezza. Su Windows serve il runtime WebView2,
+già presente su Windows 11 e sui Windows 10 aggiornati.
 
 ## Configurazione
 
@@ -183,6 +213,7 @@ La cartella contiene dati personali degli alunni: va protetta e inclusa nei back
 - Nel PDF l'a capo usa larghezze stimate dei caratteri e i caratteri fuori dall'alfabeto
   occidentale diventano `?`; nell'ODT il testo resta invariato.
 - Il token di sessione è salvato in chiaro nel database, con scadenza a 8 ore.
-- `sentiero-tutor` si avvia da terminale: non c'è un pacchetto installabile né un'icona. I suoi
+- `Sentiero.app` esiste solo per macOS e non è firmata né notarizzata per la distribuzione; su
+  Windows e Linux `sentiero-tutor` si avvia da terminale. I suoi
   dati non si sincronizzano con il server della scuola, e mostra anche approvazione del CdC e
   visibilità alla famiglia, che in uso personale non servono.
