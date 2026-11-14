@@ -9,7 +9,8 @@ testi, grafica o codice.
 Funzionalità: modelli PFI in cinque sezioni personalizzabili, assegnazione di modello e tutor,
 anagrafica con importazione da CSV, compilazione con versioni numerate, documenti PDF e ODT per
 ogni versione, allegati, consultazione da parte del Consiglio di Classe e del dirigente,
-approvazione, area della famiglia con visto, esportazione di fine anno.
+approvazione, area della famiglia con visto, esportazione di fine anno. Oltre al server per la
+scuola c'è `sentiero-tutor`, un'app desktop per il singolo tutor.
 
 ## Avvio
 
@@ -37,7 +38,8 @@ in una finestra propria:
 cargo run --release --features finestra --bin sentiero-tutor
 ```
 
-Chiudendo la finestra il programma termina. PDF, ODT e allegati scaricati finiscono nella cartella
+Chiudendo la finestra il programma termina. Su macOS la finestra ha i menu Sentiero e Modifica,
+che abilitano Cmd+C, Cmd+V e Cmd+Q. PDF, ODT e allegati scaricati finiscono nella cartella
 Download e si aprono con il programma predefinito. Su Linux la finestra richiede le librerie di
 sistema GTK 3 e WebKitGTK.
 
@@ -124,7 +126,12 @@ quest'ordine. I file sono in UTF-8, con una riga di intestazione e separatore `;
 
 ```bash
 cargo fmt && cargo clippy --all-targets -- -D warnings && cargo test
+cargo clippy --all-targets --features finestra -- -D warnings
 ```
+
+Il secondo comando controlla anche il codice della finestra di `sentiero-tutor`. Il profilo
+release non rimuove i simboli (`strip = false` in `Cargo.toml`): con gli strumenti Apple recenti
+lo strip rende non caricabili le librerie delle macro e la build fallisce.
 
 I test di integrazione in `tests/accesso.rs` usano un database in memoria e verificano, per ogni
 route, quali profili possono accedere.
@@ -176,3 +183,6 @@ La cartella contiene dati personali degli alunni: va protetta e inclusa nei back
 - Nel PDF l'a capo usa larghezze stimate dei caratteri e i caratteri fuori dall'alfabeto
   occidentale diventano `?`; nell'ODT il testo resta invariato.
 - Il token di sessione è salvato in chiaro nel database, con scadenza a 8 ore.
+- `sentiero-tutor` si avvia da terminale: non c'è un pacchetto installabile né un'icona. I suoi
+  dati non si sincronizzano con il server della scuola, e mostra anche approvazione del CdC e
+  visibilità alla famiglia, che in uso personale non servono.
